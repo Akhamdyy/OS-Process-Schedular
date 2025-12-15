@@ -31,6 +31,8 @@ struct processData {
     int runningtime;
     int priority;
     int dependencyId;
+    int diskLoc;      
+    int memSize;      
 };
 
 struct msgbuff {
@@ -66,7 +68,7 @@ void initClk()
  * resources between them and the clock module.
  * Again, Remember that the clock is only emulation!
  * Input: terminateAll: a flag to indicate whether that this is the end of simulation.
- *                      It terminates the whole system and releases resources.
+ * It terminates the whole system and releases resources.
 */
 
 void destroyClk(bool terminateAll)
@@ -77,5 +79,3 @@ void destroyClk(bool terminateAll)
         killpg(getpgrp(), SIGINT);
     }
 }
-
-

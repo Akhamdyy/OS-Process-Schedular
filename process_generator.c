@@ -31,12 +31,13 @@ int main(int argc, char * argv[])
             processesList = (struct processData *) realloc(processesList, capacity * sizeof(struct processData));
         }
         struct processData *p = &processesList[processCount];
-        int count = sscanf(line, "%d %d %d %d %d", &p->id, &p->arrivaltime, &p->runningtime, &p->priority, &p->dependencyId);
-        if(count >= 4){
+        int count = sscanf(line, "%d %d %d %d %d %d %d", &p->id, &p->arrivaltime, &p->runningtime, &p->priority, &p->dependencyId, &p->diskLoc, &p->memSize);           
+        if(count >= 6){ 
             processCount++;
         }
     }
     fclose(inputFile);
+    
     int algo=0;
     int quantum=0;
     printf("Choose Scheduling Algorithm:\n");
@@ -73,7 +74,8 @@ int main(int argc, char * argv[])
         exit(1);
     }
     initClk();
-    // TODO Generation Main Loop
+    
+    // Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // 7. Clear clock resources
@@ -105,7 +107,6 @@ int main(int argc, char * argv[])
 
 void clearResources(int signum)
 {
-    //TODO Clears all resources in case of interruption
     msgctl(msgq_id, IPC_RMID, NULL);
     destroyClk(true);
     exit(0);
