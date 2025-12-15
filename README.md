@@ -80,7 +80,7 @@ Choose Algorithm: Select 3 for Round Robin.
 
 Enter Quantum: Recommended 2 or 3 for heavy load testing.
 ```
-##📊 Output Logs
+## 📊 Output Logs
 The system generates three log files for analysis:
 
 **`scheduler.log:`** Tracks every state transition (Started, Stopped, Resumed, Finished) for every process.
@@ -103,7 +103,7 @@ Average Waiting Time
 Standard Deviation of WTA
 ```
 
-##🧠 System Architecture
+## 🧠 System Architecture
 
 
 <img width="2816" height="1536" alt="OS Project Block Diagram" src="https://github.com/user-attachments/assets/e0229ab2-cf7f-448e-8512-b7db70c451a4" />
