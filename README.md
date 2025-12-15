@@ -51,3 +51,4 @@ scheduler.perf: Metrics (CPU Utilization, Avg Wait, Avg WTA).
 🧠 Architecture
 The system uses Message Queues for process creation, Shared Memory for time synchronization, and Signals (SIGSTOP/SIGCONT) to manage context switching and page fault blocking.
 ```
+
