@@ -79,20 +79,21 @@ Follow the on-screen prompts:
 Choose Algorithm: Select 3 for Round Robin.
 
 Enter Quantum: Recommended 2 or 3 for heavy load testing.
-
-📊 Output Logs
+```
+##📊 Output Logs
 The system generates three log files for analysis:
 
-scheduler.log: Tracks every state transition (Started, Stopped, Resumed, Finished) for every process.
+**`scheduler.log:`** Tracks every state transition (Started, Stopped, Resumed, Finished) for every process.
 
-memory.log: Tracks MMU events including Memory Allocations, Page Faults, and Swapping operations.
+**`memory.log:`** Tracks MMU events including Memory Allocations, Page Faults, and Swapping operations.
 
-```
-
+```bash
 #Swapping out page 3 to disk
 At time 190 page 2 for process 10 is loaded into memory page 3.
-scheduler.perf: Calculates final system metrics:
+```
 
+**`scheduler.perf:`** Calculates final system metrics:
+```bash
 CPU Utilization
 
 Average Weighted Turnaround Time (WTA)
@@ -100,8 +101,9 @@ Average Weighted Turnaround Time (WTA)
 Average Waiting Time
 
 Standard Deviation of WTA
+```
 
-🧠 System Architecture
+##🧠 System Architecture
 
 
 <img width="2816" height="1536" alt="OS Project Block Diagram" src="https://github.com/user-attachments/assets/e0229ab2-cf7f-448e-8512-b7db70c451a4" />
