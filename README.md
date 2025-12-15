@@ -87,7 +87,7 @@ scheduler.log: Tracks every state transition (Started, Stopped, Resumed, Finishe
 
 memory.log: Tracks MMU events including Memory Allocations, Page Faults, and Swapping operations.
 
-Plaintext
+```
 
 #Swapping out page 3 to disk
 At time 190 page 2 for process 10 is loaded into memory page 3.
@@ -103,7 +103,7 @@ Standard Deviation of WTA
 
 🧠 System Architecture
 
-```
+
 <img width="2816" height="1536" alt="OS Project Block Diagram" src="https://github.com/user-attachments/assets/e0229ab2-cf7f-448e-8512-b7db70c451a4" />
 
 The system uses a Message Queue to pass process definitions from the Generator to the Scheduler. The Clock updates a timestamp in Shared Memory. The Scheduler/MMU manages Child Processes via fork/exec and controls their execution flow using SIGSTOP and SIGCONT signals.
