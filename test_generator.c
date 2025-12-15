@@ -10,15 +10,20 @@ struct processData
     int runningtime;
     int id;
     int dependencyId;
+    int memSize; 
+    int diskLoc; 
 };
 
 void initializeProcessData(struct processData *processes, int*lastArrival,int i) {
         processes[i].id = i + 1;
-        processes[i].arrivaltime = *lastArrival + rand() % 11; // increasing arrival
+        processes[i].arrivaltime = *lastArrival + rand() % 11; 
         *lastArrival = processes[i].arrivaltime;
         processes[i].runningtime = 1 + rand() % 30;
         processes[i].priority = rand() % 11;
         processes[i].dependencyId = -1;
+        
+        processes[i].memSize = 64 + (rand() % 449); 
+        processes[i].diskLoc = rand() % 10000;
 }
 
 void assignProcessDependency(struct processData *processes, int i,int numberOfProcesses){
@@ -43,18 +48,49 @@ void assignProcessDependency(struct processData *processes, int i,int numberOfPr
         } else {
             processes[i].dependencyId = -1; 
         }
+        free(possible);
     } else {
         processes[i].dependencyId = -1;
     }
 }
 
 void writeProcessInFile(FILE *pFile, struct processData *processes, int i) {
-    fprintf(pFile, "%-5d %-10d %-10d %-10d %-20d\n",
+    fprintf(pFile, "%-5d %-10d %-10d %-10d %-10d %-10d %-10d\n",
             processes[i].id,
             processes[i].arrivaltime,
             processes[i].runningtime,
             processes[i].priority,
-            processes[i].dependencyId);
+            processes[i].dependencyId,
+            processes[i].diskLoc,
+            processes[i].memSize);
+}
+
+void generateRequests(struct processData p) {
+    char filename[50];
+    sprintf(filename, "request_%d.txt", p.id);
+    FILE *reqFile = fopen(filename, "w");
+    if (!reqFile) return;
+
+    fprintf(reqFile, "#time address type\n");
+
+    int numRequests = p.runningtime / 2; 
+    if (numRequests == 0) numRequests = 1;
+
+    int currentTime = 0;
+
+    for (int k = 0; k < numRequests; k++) {
+        currentTime += 1 + (rand() % 4);
+        
+        if (currentTime >= p.runningtime) break;
+
+        int addr = rand() % p.memSize;
+        
+        char type = (rand() % 2) == 0 ? 'r' : 'w';
+
+        fprintf(reqFile, "%d %d %c\n", currentTime, addr, type);
+    }
+
+    fclose(reqFile);
 }
 
 int main(int argc, char * argv[])
@@ -72,8 +108,8 @@ int main(int argc, char * argv[])
 
     srand(time(null));
 
-    fprintf(pFile, "%-5s %-10s %-10s %-10s %-20s\n",
-        "#id", "arrival", "runtime", "priority", "dependencyId");
+    fprintf(pFile, "%-5s %-10s %-10s %-10s %-10s %-10s %-10s\n",
+        "#id", "arrival", "runtime", "priority", "dependencyId", "base", "limit");
 
     struct processData *processes = malloc(no * sizeof(struct processData));
     if (!processes) {
@@ -84,11 +120,16 @@ int main(int argc, char * argv[])
 
     int lastArrival = 1;
     for (int i = 0; i < no; i++) {
-        initializeProcessData(processes,&lastArrival,i);
-
-        assignProcessDependency(processes, i,no);
-        
+        initializeProcessData(processes, &lastArrival, i);
+        assignProcessDependency(processes, i, no);
         writeProcessInFile(pFile, processes, i);
+        
+        generateRequests(processes[i]);
     }
+    
     fclose(pFile);
+    free(processes);
+    
+    printf("Data generation complete. 'processes.txt' and 'request_x.txt' files created.\n");
+    return 0;
 }
