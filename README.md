@@ -30,7 +30,7 @@ A complete simulation of a paging system integrated with the Round Robin schedul
 - **`scheduler.c`**: The core component. It acts as both the CPU Scheduler and the MMU. It manages the Ready Queue, handles Page Faults, and logs system performance.
 - **`clk.c`**: Emulates the system clock by updating a shared memory integer every second.
 - **`process.c`**: Represents a user program. It consumes CPU time and generates signals upon completion.
-- **`test_generator.c`**: Utility to generate random test data (processes and memory access traces) for Phase 2.
+- **`test_generator.c`**: Utility to generate random test data (processes and memory access traces).
 - **`headers.h`**: Shared data structures (PCB, Page Table, Frame Table) and IPC keys.
 
 ## 🛠️ Build & Installation
@@ -76,7 +76,7 @@ Bash
 3. runtime Options
 Follow the on-screen prompts:
 
-Choose Algorithm: Select 3 for Round Robin (required for Phase 2 MMU support).
+Choose Algorithm: Select 3 for Round Robin.
 
 Enter Quantum: Recommended 2 or 3 for heavy load testing.
 
@@ -102,7 +102,9 @@ Average Waiting Time
 Standard Deviation of WTA
 
 🧠 System Architecture
-(Note: You can upload the block diagram image generated earlier to your repo and link it here)
+
+<img width="2816" height="1536" alt="OS Project Block Diagram" src="https://github.com/user-attachments/assets/24da3cac-98c9-4ec8-acc7-6aeec440a3ab" />
+
 
 The system uses a Message Queue to pass process definitions from the Generator to the Scheduler. The Clock updates a timestamp in Shared Memory. The Scheduler/MMU manages Child Processes via fork/exec and controls their execution flow using SIGSTOP and SIGCONT signals.
 ```
