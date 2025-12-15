@@ -106,7 +106,7 @@ Standard Deviation of WTA
 ## 🧠 System Architecture
 
 
-<img width="2816" height="1536" alt="OS Project Block Diagram" src="https://github.com/user-attachments/assets/e0229ab2-cf7f-448e-8512-b7db70c451a4" />
+<img width="2112" height="1152" alt="OS Project Block Diagram" src="https://github.com/user-attachments/assets/e0229ab2-cf7f-448e-8512-b7db70c451a4" />
 
 The system uses a Message Queue to pass process definitions from the Generator to the Scheduler. The Clock updates a timestamp in Shared Memory. The Scheduler/MMU manages Child Processes via fork/exec and controls their execution flow using SIGSTOP and SIGCONT signals.
 
