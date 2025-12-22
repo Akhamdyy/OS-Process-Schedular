@@ -1,161 +1,24 @@
 #include "headers.h"
+#include "mmu.h"
 #include <math.h>
 
 #define MAX_PROCESSES 100
 #define DEFAULT_HEAP_SIZE 100
 #define LOG_FILE "scheduler.log"
-#define MEM_LOG_FILE "memory.log"
 #define PERF_FILE "scheduler.perf"
-#define MEM_MEMORY_SIZE 512
-#define PAGE_SIZE 16
-#define NUM_FRAMES (MEM_MEMORY_SIZE / PAGE_SIZE)
-#define DISK_ACCESS_TIME 10
-#define READY 0
-#define RUNNING 1
-#define BLOCKED 2
-#define FINISHED 3
-#define WAITING_IO 4 
-
-typedef struct {
-    int frame_number;
-    bool valid;
-    bool reference;
-    bool dirty;
-} PageTableEntry;
-
-typedef struct {
-    int pid;        
-    int page_num;   
-} Frame;
-
-typedef struct PCB {
-    int PID;            
-    int UID;            
-    int PRIORITY;
-    int ARRIVAL_TIME;
-    int RUN_TIME;
-    int REMAINING_TIME;
-    int START_TIME;
-    int END_TIME;
-    int WAIT_TIME;
-    int TURNAROUND_TIME;
-    int RESUME_TIME; 
-    int DISK_BASE;      
-    int MEM_LIMIT;      
-    PageTableEntry *page_table;
-    int page_table_size;
-    FILE *request_file;
-    int next_req_time;
-    int next_req_addr;
-    char next_req_type; 
-    bool has_pending_req;
-    bool requests_finished;
-    int state;
-    int dependencyId;
-    int io_completion_time;
-    int faulty_addr; 
-} PCB;
 
 int msgq_id;                  
 PCB pcbs[MAX_PROCESSES];      
 bool ran[MAX_PROCESSES];      
 FILE *log_file = NULL;        
-FILE *mem_log_file = NULL;
 volatile sig_atomic_t usr1_received = 0; 
 int current_pcb_index = -1;   
-Frame frames[NUM_FRAMES]; 
-int clock_ptr = 0;
 double total_wta = 0;
 double total_wait = 0;
 double total_run_time_accum = 0;
 double total_wta_sq = 0; 
 int finished_process_count = 0;
 int process_count_expected = 0;
-
-void init_mmu() {
-    for (int i = 0; i < NUM_FRAMES; i++) {
-        frames[i].pid = -1; 
-        frames[i].page_num = -1;
-    }
-    mem_log_file = fopen(MEM_LOG_FILE, "w");
-    fprintf(mem_log_file, "#Memory Log Started\n");
-}
-
-int get_victim_frame() {
-    while (1) {
-        int pid = frames[clock_ptr].pid;
-        int page = frames[clock_ptr].page_num;
-        if (pid == -1) { 
-            int victim = clock_ptr;
-            clock_ptr = (clock_ptr + 1) % NUM_FRAMES;
-            return victim;
-        }
-        PCB *owner = &pcbs[pid - 1]; 
-        if (owner->page_table[page].reference) {
-            owner->page_table[page].reference = false;
-            clock_ptr = (clock_ptr + 1) % NUM_FRAMES;
-        } else {
-            int victim = clock_ptr;
-            clock_ptr = (clock_ptr + 1) % NUM_FRAMES;
-            return victim;
-        }
-    }
-}
-
-int allocate_frame(int pid, int page_num, bool is_page_table) {
-    for (int i = 0; i < NUM_FRAMES; i++) {
-        if (frames[i].pid == -1) {
-            frames[i].pid = pid;
-            frames[i].page_num = page_num;
-            if (!is_page_table) {
-                 fprintf(mem_log_file, "#Free Physical page %d allocated\n", i);
-            }
-            return i;
-        }
-    }
-    int victim_idx = get_victim_frame();
-    int victim_pid = frames[victim_idx].pid;
-    int victim_page = frames[victim_idx].page_num;
-    PCB *victim_pcb = &pcbs[victim_pid - 1];
-    if (victim_pcb->page_table[victim_page].dirty) {
-        fprintf(mem_log_file, "#Swapping out page %d to disk\n", victim_idx);
-        victim_pcb->page_table[victim_page].dirty = false;
-    }
-    victim_pcb->page_table[victim_page].valid = false;
-    victim_pcb->page_table[victim_page].frame_number = -1;
-    frames[victim_idx].pid = pid;
-    frames[victim_idx].page_num = page_num;
-    return victim_idx;
-}
-
-int mmu_request(PCB *pcb, int logical_addr, char type, int current_time) {
-    int page_num = logical_addr / PAGE_SIZE;
-    if (page_num >= pcb->page_table_size) {
-        return 0; 
-    }
-    if (pcb->page_table[page_num].valid) {
-        pcb->page_table[page_num].reference = true;
-        if (type == 'w' || type == 'W') {
-            pcb->page_table[page_num].dirty = true;
-        }
-        return 0; 
-    } else {
-        fprintf(mem_log_file, "PageFault upon VA %d from process %d\n", logical_addr, pcb->UID);
-        pcb->faulty_addr = logical_addr;
-        return 1; 
-    }
-}
-
-void resolve_page_fault(PCB *pcb, int current_time) {
-    int page_num = pcb->faulty_addr / PAGE_SIZE;
-    int frame = allocate_frame(pcb->UID, page_num, false);
-    pcb->page_table[page_num].frame_number = frame;
-    pcb->page_table[page_num].valid = true;
-    pcb->page_table[page_num].reference = true; 
-    pcb->page_table[page_num].dirty = false;    
-    fprintf(mem_log_file, "At time %d page %d for process %d is loaded into memory page %d.\n", 
-            current_time, page_num, pcb->UID, frame);
-}
 
 void parse_next_request(PCB *pcb) {
     if (pcb->requests_finished || !pcb->request_file) return;
@@ -594,6 +457,8 @@ void ROUND_ROBIN(int total_processes, int quantum) {
     PCB *current_process = NULL;
     int now;
     int current_q_time = 0;
+    init_mmu(pcbs);
+
     while (finished_process_count < total_processes) {
         now = getClk();
         while (msgrcv(msgq_id, &msg, sizeof(msg.pData), 0, IPC_NOWAIT) != -1) {
@@ -602,8 +467,11 @@ void ROUND_ROBIN(int total_processes, int quantum) {
             new_pcb.page_table[0].frame_number = frame;
             new_pcb.page_table[0].valid = true;
             new_pcb.page_table[0].reference = true;
-            fprintf(mem_log_file, "At time %d page 0 for process %d is loaded into memory page %d.\n", 
-            now, new_pcb.UID, frame);
+            FILE* mem_log = fopen("memory.log", "a");
+            fprintf(mem_log, "At time %d page 0 for process %d is loaded into memory page %d.\n", 
+                    now, new_pcb.UID, frame);
+            fclose(mem_log);
+
             pcbs[new_pcb.UID - 1] = new_pcb;
             PCB_QUEUE_ENQUEUE(ready_q, &pcbs[new_pcb.UID - 1]);
         }
@@ -674,12 +542,6 @@ void ROUND_ROBIN(int total_processes, int quantum) {
                     total_wait += current_process->WAIT_TIME;
                     total_run_time_accum += current_process->RUN_TIME;
                     total_wta_sq += pow(((double)current_process->TURNAROUND_TIME / current_process->RUN_TIME), 2);
-                    for(int i=0; i<NUM_FRAMES; i++) {
-                        if (frames[i].pid == current_process->UID) {
-                            frames[i].pid = -1; 
-                            frames[i].page_num = -1;
-                        }
-                    }
                     if(current_process->request_file) fclose(current_process->request_file);
                     current_process = NULL;
                 } 
@@ -698,6 +560,8 @@ void ROUND_ROBIN(int total_processes, int quantum) {
         sleep(1); 
         (*shmaddr)++; 
     }
+    
+    destroy_mmu();
     PCB_QUEUE_DESTROY(ready_q);
 }
 
@@ -705,7 +569,6 @@ int main(int argc, char * argv[])
 {
     initClk();
     init_scheduler_globals();
-    init_mmu();
     int algorithm = 0;
     int quantum = 0;
     process_count_expected = 0; 
@@ -742,7 +605,6 @@ int main(int argc, char * argv[])
         fclose(perf_file);
     }
     fclose(log_file);
-    fclose(mem_log_file);
     msgctl(msgq_id, IPC_RMID, NULL); 
     destroyClk(true);
     return 0;
